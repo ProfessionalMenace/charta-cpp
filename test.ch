@@ -1,8 +1,8 @@
-fn printer (x : int) -> (int) {
--> dup 0 = ?  dup print 1 - printer
-           |v
+fn fibo (x : int) -> (int) {
+-> dup 0 = ?  dup 1 = ?  dup 1 - fibo swp 2 - fibo +
+           |v         |v
 }
 
 fn main () -> () {
--> 10 printer
+-> 10 fibo print
 }

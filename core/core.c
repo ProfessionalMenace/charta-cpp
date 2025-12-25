@@ -136,17 +136,15 @@ void ch_stk_append(ch_stack_node **to, ch_stack_node *from) {
 void ch_stk_delete(ch_stack_node **stk) {
     ch_stack_node *head = *stk;
     while (head) {
-      ch_val_delete(&head->val);
-      ch_stack_node *next = head->next;
-      free(head);
-      head = next;
-    }        
+        ch_val_delete(&head->val);
+        ch_stack_node *next = head->next;
+        free(head);
+        head = next;
+    }
     *stk = NULL;
 }
 
-ch_stack_node *__sprint(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 1);
-    ch_value v = ch_stk_pop(&local);
+void print_value(ch_value v) {
     switch (v.kind) {
     case CH_VALK_INT:
         printf("%d\n", v.value.i);
@@ -164,6 +162,12 @@ ch_stack_node *__sprint(ch_stack_node **full) {
         printf("%s\n", v.value.s.data);
         break;
     }
+}
+
+ch_stack_node *__sprint(ch_stack_node **full) {
+    ch_stack_node *local = ch_stk_args(full, 1);
+    ch_value v = ch_stk_pop(&local);
+    print_value(v);
     return NULL;
 }
 
@@ -174,6 +178,26 @@ ch_stack_node *__sdup(ch_stack_node **full) {
     ch_stk_push(&local, v);
     ch_stk_push(&local, cp);
     return local;
+}
+
+ch_stack_node *__sswp(ch_stack_node **full) {
+    ch_stack_node *local = ch_stk_args(full, 2);
+    ch_value a = ch_stk_pop(&local);
+    ch_value b = ch_stk_pop(&local);
+    ch_stk_push(&local, a);
+    ch_stk_push(&local, b);
+    return local;
+}
+
+ch_stack_node *__sdbg(ch_stack_node **full) {
+    ch_stack_node *elem = *full;
+    size_t i = 0;
+    while (elem) {
+        printf("%zu | ", i);
+        print_value(elem->val);
+        elem = elem->next;
+    }
+    return NULL;    
 }
 
 ch_stack_node *__s__u61(ch_stack_node **full) {

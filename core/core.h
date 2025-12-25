@@ -63,6 +63,8 @@ void ch_stk_delete(ch_stack_node **stk);
 
 ch_stack_node *__sprint(ch_stack_node **full);
 ch_stack_node *__sdup(ch_stack_node **full);
+ch_stack_node *__sswp(ch_stack_node **full);
+ch_stack_node *__sdbg(ch_stack_node **full);
 /// =
 ch_stack_node *__s__u61(ch_stack_node **full);
 /// +

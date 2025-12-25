@@ -4,7 +4,7 @@ CC := clang
 CCFLAGS := -Wall -Wextra -ggdb
 LDFLAGS := -fsanitize=address,undefined
 
-SRC := src/main.cpp src/parser.cpp src/traverser.cpp src/ir.cpp src/utf.cpp src/make_c.cpp
+SRC := src/main.cpp src/parser.cpp src/traverser.cpp src/ir.cpp src/utf.cpp src/make_c.cpp src/builder.cpp
 OBJ := $(SRC:.cpp=.o)
 
 CORE_SRC := core/core.c
