@@ -85,7 +85,8 @@ bool parser::Lexer::parse_symbol() {
             break;
         if (is_space(c))
             break;
-        if (match("->") || match("<-") || match("|^") || match("|v"))
+        if (match("->") || match("<-") || match("|^") || match("|v") ||
+            match("^|") || match("v|"))
             break;
         pop();
     }
@@ -148,13 +149,13 @@ bool parser::Lexer::parse_special() {
             return true;
         }
 
-        if (match("|^")) {
+        if (match("|^") || match("^|")) {
             output.emplace_back(
                 Token{start, cursor, cursor - start, Token::Up, {}});
             return true;
         }
 
-        if (match("|v")) {
+        if (match("|v") || match("^|")) {
             output.emplace_back(
                 Token{start, cursor, cursor - start, Token::Down, {}});
             return true;
@@ -345,6 +346,30 @@ void parser::Parser::spaces() {
     }
 }
 
+std::optional<parser::TypeSig> parser::Parser::parse_typesig() {
+    bool is_stack{false};
+    if (auto p = peek(); p && p->kind == Token::LSquare) {
+        is_stack = true;
+        ++cursor;
+        spaces();
+    }
+    std::string name{};
+    if (auto p = peek(); p && p->kind == Token::Symbol) {
+        name = std::get<std::string>(p->value);
+    } else {
+        throw ParserError(p->start, p->end, "Expected typename");
+    }
+    ++cursor;
+    if (is_stack) {
+        spaces();
+        if (auto p = peek(); !(p && p->kind == Token::RSquare)) {
+            throw ParserError(p->start, p->end, "Expected ']'");
+        }
+        ++cursor;
+    }
+    return TypeSig{name, is_stack};
+}
+
 std::optional<parser::FnDecl> parser::Parser::parse_fndecl() {
     if (auto p = peek(); !(p && p->kind == Token::Symbol &&
                            std::get<std::string>(p->value) == "fn")) {
@@ -370,23 +395,79 @@ std::optional<parser::FnDecl> parser::Parser::parse_fndecl() {
     ++cursor;
     spaces();
     bool is_closed{false};
-    std::vector<std::string> args{};
+    std::vector<std::pair<std::string, TypeSig>> args{};
+    bool is_ellipses{false};
     while (auto p = peek()) {
         ++cursor;
         end = p->end;
         if (p->kind == Token::RParen) {
             is_closed = true;
             break;
-        } else if (p->kind == Token::Symbol) {
-            args.emplace_back(std::get<std::string>(p->value));
+        } else if (p->kind == Token::Symbol && !is_ellipses) {
+            std::string name = std::get<std::string>(p->value);
+            if (name == "...") {
+                is_ellipses = true;
+                spaces();
+                continue;
+            }
+            spaces();
+            if (auto p = peek(); !(p && p->kind == Token::Symbol &&
+                                   std::get<std::string>(p->value) == ":")) {
+                throw ParserError(p->start, p->end, "Expected ':'");
+            }
+            ++cursor;
+            spaces();
+            auto typ = parse_typesig();
+            if (!typ) {
+                throw ParserError(p->start, p->end, "Expected type signature");
+            }
+            args.emplace_back(std::pair{name, *typ});
         } else {
-            throw ParserError(p->start, p->end,
-                              "Unexpected token in function argument list");
+            throw ParserError(p->start, p->end, "Expected argument name");
         }
         spaces();
     }
     if (!is_closed) {
         throw ParserError(start, end, "Unclosed function argument list");
+    }
+    spaces();
+    if (auto p = peek(); !(p && p->kind == Token::Right)) {
+        throw ParserError(start, end, "Expected '->'");
+    }
+    ++cursor;
+    spaces();
+    if (auto p = peek(); !(p && p->kind == Token::LParen)) {
+        throw ParserError(start, end, "Expected '('");
+    }
+    ++cursor;    
+    Return rets{};
+    while (true) {
+        spaces();        
+        auto p = peek();
+        if (!p)
+            throw ParserError(start, end, "Unclosed returns list");
+        if (p->kind == Token::RParen) {
+            ++cursor;
+            break;
+        }
+        if (p->kind == Token::Symbol &&
+            std::get<std::string>(p->value) == "...") {
+            ++cursor;
+            spaces();
+            auto typ = parse_typesig();
+            if (!typ)
+                throw ParserError(p->start, p->end, "Expected type");
+            rets.rest = typ;
+            if (peek()->kind == Token::RParen) {
+                ++cursor;
+                break;
+            }
+            throw ParserError(p->start, p->end, "Expected ')'");
+        }
+        auto typ = parse_typesig();
+        if (!typ)
+            throw ParserError(p->start, p->end, "Expected type");
+        rets.args.emplace_back(*typ);
     }
     spaces();
     if (auto p = peek(); !(p && p->kind == Token::LCurly)) {
@@ -399,16 +480,11 @@ std::optional<parser::FnDecl> parser::Parser::parse_fndecl() {
         throw ParserError(p->start, p->end, "Expected '}'");
     }
     ++cursor;
-    Argument arg_num = [&args]() {
-        if (args.empty()) {
-            return Argument{Argument::Limited, 0};
-        } else if (args.back() == "...") {
-            return Argument{Argument::Ellipses, args.size() - 1};
-        } else {
-            return Argument{Argument::Limited, args.size()};
-        }
-    }();
-    return FnDecl{name, arg_num, grid};
+    return FnDecl{
+        name,
+        Argument{is_ellipses ? Argument::Ellipses : Argument::Limited, args},
+        rets,
+        grid};
 }
 
 std::optional<parser::TopLevel> parser::Parser::parse_top_level() {

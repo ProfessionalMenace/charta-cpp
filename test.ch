@@ -1,7 +1,6 @@
-fn loop-n (n) {
--> dup 0 > ?
+fn loop-n (n : int) -> (int ... int) {
+-> dup 0 > ? pop
            |v
            dup
-           put
    |^ - 1 <-
 }

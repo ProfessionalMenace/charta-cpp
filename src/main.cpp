@@ -37,25 +37,44 @@ int main(int argc, char *argv[]) {
         auto prog = parser::Parser(toks).parse_program();
         for (auto &tl : prog) {
             if (auto fn = std::get_if<parser::FnDecl>(&tl)) {
+                auto tname = [](parser::TypeSig type) {
+                    std::string t{};
+                    if (type.is_stack) {
+                        t += "[";
+                    }
+                    t += type.name;
+                    if (type.is_stack) {
+                        t += "]";
+                    }
+                    return t;
+                };
                 std::string args{};
-                if (fn->args.value != 0) {
-                    args += "Arg0";
-                    for (std::size_t i = 1; i < fn->args.value; ++i) {
-                        args += ", Arg" + std::to_string(i);
-                    }
-                }
-                if (fn->args.kind == parser::Argument::Ellipses) {
-                    if (fn->args.value == 0) {
-                        args += "...";
+                bool is_first{true};
+                for (auto &[name, type] : fn->args.args) {
+                    if (!is_first) {
+                        args += ", ";
                     } else {
-                        args += ", ...";
+                        is_first = false;
                     }
+                    args += name + " : " + tname(type);
                 }
-                std::println("fn {}({})", fn->name, args);
+                std::string rets{};
+                is_first = true;
+                for (auto type : fn->rets.args) {
+                    if (!is_first) {
+                        rets += ", ";
+                    } else {
+                        is_first = false;
+                    }
+                    rets += tname(type);
+                }
+                std::println("fn {}({})\n -> ({}{})", fn->name, args, rets,
+                             fn->rets.rest ? ", ..." + tname(*fn->rets.rest)
+                                           : "");
                 auto instrs = traverser::traverse(fn->body);
                 for (auto &instr : instrs) {
-                  std::println("  {}", instr.show());
-                }                    
+                    std::println("  {}", instr.show());
+                }
             }
         }
     } catch (parser::ParserError e) {

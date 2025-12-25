@@ -62,9 +62,9 @@ std::vector<Instruction> filter_pos(std::vector<Instruction> instrs) {
                     auto gpos = std::get<IrPos>(i.value);
                     if (pos.x <= gpos.x && gpos.x < pos.x + pos.length &&
                         gpos.y == pos.y) {
-                        next_instrs.emplace_back(
-                            Instruction{Instruction::Label,
-                                        std::format("P_{}_{}", gpos.x, gpos.y)});
+                        next_instrs.emplace_back(Instruction{
+                            Instruction::Label,
+                            std::format("P_{}_{}", gpos.x, gpos.y)});
                     }
                 }
             }
@@ -73,6 +73,33 @@ std::vector<Instruction> filter_pos(std::vector<Instruction> instrs) {
         }
     }
     return next_instrs;
+}
+
+std::vector<std::pair<Pos, Pos>> get_perps(parser::Grid const &grid, Pos pos,
+                                           Pos dir) {
+    std::vector<std::pair<Pos, Pos>> poses{};
+    if (is_vert(dir)) {
+        if (auto n = grid_at(grid, pos + left);
+            n && n->kind == parser::Node::DirLeft) {
+            poses.emplace_back(std::pair{left, pos + left});
+        }
+
+        if (auto n = grid_at(grid, pos + right);
+            n && n->kind == parser::Node::DirRight) {
+            poses.emplace_back(std::pair{right, pos + right});
+        }
+    } else {
+        if (auto n = grid_at(grid, pos + up);
+            n && n->kind == parser::Node::DirUp) {
+            poses.emplace_back(std::pair{up, pos + up});
+        }
+
+        if (auto n = grid_at(grid, pos + down);
+            n && n->kind == parser::Node::DirDown) {
+            poses.emplace_back(std::pair{down, pos + down});
+        }
+    }
+    return poses;
 }
 
 std::vector<Instruction> traverser::traverse(parser::Grid grid) {
@@ -119,12 +146,19 @@ std::vector<Instruction> traverser::traverse(parser::Grid grid) {
                 self(dir, next_pos, self);
                 break;
             case parser::Node::Branch: {
-                auto lbl = std::format("B_{}_{}", pos.x, pos.y);
-                instrs.emplace_back(Instruction{Instruction::JumpTrue, lbl});
-                self(dir, next_pos, self);
-                instrs.emplace_back(Instruction{Instruction::Label, lbl});
-                auto next_dir = is_vert(dir) ? Pos{1, 0} : Pos{0, 1};
-                self(next_dir, pos + next_dir, self);
+                auto perps = get_perps(grid, pos, dir);
+                if (perps.size() == 1) {
+                    auto lbl = std::format("B_{}_{}", pos.x, pos.y);
+                    instrs.emplace_back(
+                        Instruction{Instruction::JumpTrue, lbl});
+                    self(dir, next_pos, self);
+                    instrs.emplace_back(Instruction{Instruction::Label, lbl});
+                    self(perps.front().first, perps.front().second, self);
+                } else {
+                    throw TraverserError(pos.x, pos.y,
+                                         "Branch expected 1 direction, got " +
+                                             std::to_string(perps.size()));
+                }
                 break;
             }
             case parser::Node::DirLeft:

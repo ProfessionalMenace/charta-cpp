@@ -89,14 +89,25 @@ struct Node {
 
 using Grid = std::vector<std::vector<Node>>;
 
+struct TypeSig {
+    std::string name;
+    bool is_stack;
+};
+
 struct Argument {
     enum Kind { Limited, Ellipses } kind;
-    std::size_t value;
+    std::vector<std::pair<std::string, TypeSig>> args;
+};
+
+struct Return {
+    std::vector<TypeSig> args;
+    std::optional<TypeSig> rest;
 };
 
 struct FnDecl {
     std::string name;
     Argument args;
+    Return rets;
     Grid body;
 };
 
@@ -116,6 +127,8 @@ class Parser {
     std::optional<Node> parse_node();
 
     Grid parse_grid();
+
+    std::optional<TypeSig> parse_typesig();
 
     std::optional<FnDecl> parse_fndecl();
 
