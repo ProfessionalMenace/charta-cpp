@@ -4,6 +4,12 @@
 #include "parser.hpp"
 
 namespace traverser {
+struct Function {
+    std::string name;
+    parser::Argument args;
+    parser::Return rets;
+    std::vector<ir::Instruction> body;
+};
 struct TraverserError : std::exception {
     int x;
     int y;

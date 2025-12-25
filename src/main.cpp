@@ -1,6 +1,8 @@
+#include "make_c.hpp"
 #include "parser.hpp"
 #include "traverser.hpp"
 #include "utf.hpp"
+#include <filesystem>
 #include <fstream>
 #include <print>
 #include <sstream>
@@ -10,6 +12,9 @@
 int main(int argc, char *argv[]) {
     if (argc < 2)
         return 1;
+    std::filesystem::path exe_dir{
+        std::filesystem::weakly_canonical(std::filesystem::path(argv[0]))
+            .parent_path()};
     std::ifstream file(argv[1]);
     std::ostringstream ss;
     ss << file.rdbuf();
@@ -34,8 +39,9 @@ int main(int argc, char *argv[]) {
                 },
                 tok.value);
         }
-        auto prog = parser::Parser(toks).parse_program();
-        for (auto &tl : prog) {
+        auto decls = parser::Parser(toks).parse_program();
+        backend::c::Program prog{};
+        for (auto &tl : decls) {
             if (auto fn = std::get_if<parser::FnDecl>(&tl)) {
                 auto tname = [](parser::TypeSig type) {
                     std::string t{};
@@ -72,10 +78,17 @@ int main(int argc, char *argv[]) {
                              fn->rets.rest ? ", ..." + tname(*fn->rets.rest)
                                            : "");
                 auto instrs = traverser::traverse(fn->body);
+                prog.emplace_back(
+                    traverser::Function{fn->name, fn->args, fn->rets, instrs});
                 for (auto &instr : instrs) {
                     std::println("  {}", instr.show());
                 }
             }
+            auto out = backend::c::make_c(prog);
+            std::ofstream of{std::string(argv[1]) + ".c"};
+            of << out;
+            of.flush();
+            of.close();
         }
     } catch (parser::ParserError e) {
         std::size_t line{1};

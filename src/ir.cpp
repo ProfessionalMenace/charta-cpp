@@ -1,4 +1,5 @@
 #include "ir.hpp"
+#include "parser.hpp"
 #include "utf.hpp"
 #include <iomanip>
 #include <sstream>
@@ -10,14 +11,10 @@ std::string ir::Instruction::show() {
     case PushFloat:
         return "Push " + std::to_string(std::get<float>(value));
     case PushChar: {
-        std::ostringstream ss;
-        ss << std::quoted(encode_utf8(std::get<char32_t>(value)), '\'');
-        return "Push '" + ss.str() + "'";
+      return "Push " + parser::quote_chr(std::get<char32_t>(value));
     }
     case PushStr: {
-        std::ostringstream ss;
-        ss << std::quoted(std::get<std::string>(value));
-        return "Push \"" + ss.str() + "\"";
+      return "Push " + parser::quote_str(std::get<std::string>(value));
     }
     case Call:
         return "Call " + std::get<std::string>(value);

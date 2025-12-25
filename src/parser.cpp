@@ -1,6 +1,7 @@
 #include "parser.hpp"
 #include <charconv>
 #include <cstddef>
+#include <stdexcept>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
@@ -188,6 +189,38 @@ std::optional<char32_t> parser::Lexer::take_char() {
     } else {
         return c;
     }
+}
+
+std::string escaped(char32_t c) {
+    switch (c) {
+    case U'\n':
+        return "\\n";
+    case U'\r':
+        return "\\r";
+    case U'\t':
+        return "\\t";
+    default:
+        return std::string(1, c);
+    }
+}
+
+std::string parser::quote_str(std::string const &s) {
+    std::string q{};
+    q += "\"";
+    for (std::size_t i = 0; i < s.size();) {
+        std::size_t b;
+        char32_t c = decode_utf(s, i, b);
+        if (b == 0)
+            throw std::runtime_error("UTF failed");
+        q += escaped(c);
+        i += b;
+    }
+    q += "\"";
+    return q;
+}
+
+std::string parser::quote_chr(char32_t c) {
+    return "'" + (c == '\'' ? "\\'" : escaped(c)) + "'";
 }
 
 bool parser::Lexer::parse_char() {
@@ -439,10 +472,10 @@ std::optional<parser::FnDecl> parser::Parser::parse_fndecl() {
     if (auto p = peek(); !(p && p->kind == Token::LParen)) {
         throw ParserError(start, end, "Expected '('");
     }
-    ++cursor;    
+    ++cursor;
     Return rets{};
     while (true) {
-        spaces();        
+        spaces();
         auto p = peek();
         if (!p)
             throw ParserError(start, end, "Unclosed returns list");
@@ -483,8 +516,7 @@ std::optional<parser::FnDecl> parser::Parser::parse_fndecl() {
     return FnDecl{
         name,
         Argument{is_ellipses ? Argument::Ellipses : Argument::Limited, args},
-        rets,
-        grid};
+        rets, grid};
 }
 
 std::optional<parser::TopLevel> parser::Parser::parse_top_level() {

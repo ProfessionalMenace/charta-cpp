@@ -136,4 +136,7 @@ class Parser {
 
     std::vector<TopLevel> parse_program();
 };
+
+std::string quote_str(std::string const &s);
+std::string quote_chr(char32_t c);
 } // namespace parser

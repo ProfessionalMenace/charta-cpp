@@ -2,3 +2,5 @@ charta
 compile_commands.json
 src/*.o
 .cache/
+libcore.a
+core/*.o

@@ -1,6 +1,3 @@
-fn loop-n (n : int) -> (int ... int) {
--> dup 0 > ? pop
-           |v
-           dup
-   |^ - 1 <-
+fn main () -> () {
+-> "Hello, world!" print
 }
