@@ -1,9 +1,8 @@
-fn fibo  (x : int) -> (int) {
-→ ⇈ 0 = ? ⇈ 1 = ? ⇈ 1 - fibo ↕ 2 - fibo +
-        ↓       ↓
+fn foo () → (bool) {
+→ 1 2 3 4 □
 }
 
 fn main () -> () {
-→ 10 fibo print
+→ foo print
 }
 
