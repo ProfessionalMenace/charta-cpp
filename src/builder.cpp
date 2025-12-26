@@ -1,4 +1,5 @@
 #include "builder.hpp"
+#include "checks.hpp"
 #include "make_c.hpp"
 #include "parser.hpp"
 #include "traverser.hpp"
@@ -45,6 +46,11 @@ std::vector<traverser::Function> builder::Builder::traverse() {
     }
     if (show_ir) {
         std::println("== End IR ==\n");
+    }
+    try {
+        checks::TypeChecker(fns).check();
+    } catch (checks::CheckError e) {
+        error(std::format("In function {}: {}", e.fname, e.what));
     }
     return fns;
 }
