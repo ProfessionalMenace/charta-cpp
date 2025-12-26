@@ -85,7 +85,8 @@ void emit_instrs(traverser::Function fn, std::string &out) {
         case ir::Instruction::Exit: {
             auto tmp = get_temp();
             out += "ch_stack_node*" + tmp + "=ch_stk_args(&__istack, " +
-                   std::to_string(fn.rets.args.size()) + ");\n";
+                   std::to_string(fn.rets.args.size()) + ", " +
+                   std::to_string(fn.rets.rest.has_value()) + ");\n";
             out += "ch_stk_delete(&__istack);\n";
             out += "return " + tmp + ";\n";
             break;
@@ -105,7 +106,9 @@ std::string backend::c::make_c(Program prog) {
         full += "ch_stack_node *" + mangle(fn.name) +
                 "(ch_stack_node **__ifull) {\n";
         full += "ch_stack_node *__istack = ch_stk_args(__ifull, " +
-                std::to_string(fn.args.args.size()) + ");\n";
+                std::to_string(fn.args.args.size()) + ", " +
+                std::to_string(fn.args.kind == parser::Argument::Ellipses) +
+                ");\n";
         emit_instrs(fn, full);
         full += "}\n";
     }

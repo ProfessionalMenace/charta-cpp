@@ -61,7 +61,7 @@ void ch_stk_push(ch_stack_node **stk, ch_value val);
 
 ch_value ch_stk_pop(ch_stack_node **stk);
 
-ch_stack_node *ch_stk_args(ch_stack_node **from, size_t n);
+ch_stack_node *ch_stk_args(ch_stack_node **from, size_t n, char is_rest);
 
 void ch_stk_append(ch_stack_node **to, ch_stack_node *from);
 

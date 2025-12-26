@@ -106,30 +106,41 @@ ch_value ch_stk_pop(ch_stack_node **stk) {
     return v;
 }
 
-ch_stack_node *ch_stk_args(ch_stack_node **from, size_t n) {
-    if (n == 0)
-        return NULL;
+ch_stack_node *ch_stk_args(ch_stack_node **from, size_t n, char is_rest) {
+    ch_stack_node *args = NULL;
+    if (n != 0) {
 
-    if (*from == NULL) {
-        printf("ERR: Tried to pop '%zu' arguments, but stack is empty.\n", n);
-        exit(1);
-    }
-
-    ch_stack_node *args = *from;
-    ch_stack_node *curr = *from;
-
-    for (size_t i = 1; i < n; ++i) {
-        curr = curr->next;
-        if (curr == NULL) {
-            printf(
-                "ERR: Tried to pop '%zu' arguments, but stack is too short.\n",
-                n);
+        if (*from == NULL) {
+            printf("ERR: Tried to pop '%zu' arguments, but stack is empty.\n",
+                   n);
             exit(1);
         }
+
+        args = *from;
+        ch_stack_node *curr = *from;
+
+        for (size_t i = 1; i < n; ++i) {
+            curr = curr->next;
+            if (curr == NULL) {
+                printf("ERR: Tried to pop '%zu' arguments, but stack is too "
+                       "short.\n",
+                       n);
+                exit(1);
+            }
+        }
+
+        *from = curr->next;
+        curr->next = NULL;
     }
 
-    *from = curr->next;
-    curr->next = NULL;
+    if (is_rest) {
+        ch_stack_node *arg_ext = ch_stk_new();
+        ch_stk_push(&arg_ext,
+                    (ch_value){.kind = CH_VALK_STACK, .value.stk = *from});
+        ch_stk_append(&arg_ext, args);
+        *from = NULL;
+        args = arg_ext;
+    }
 
     return args;
 }
@@ -195,7 +206,7 @@ void println_value(ch_value v) {
 }
 
 ch_stack_node *_mangle_(print, "print")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 1);
+    ch_stack_node *local = ch_stk_args(full, 1, 0);
     ch_value v = ch_stk_pop(&local);
     println_value(v);
     ch_val_delete(&v);
@@ -203,7 +214,7 @@ ch_stack_node *_mangle_(print, "print")(ch_stack_node **full) {
 }
 
 ch_stack_node *_mangle_(dup, "dup")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 1);
+    ch_stack_node *local = ch_stk_args(full, 1, 0);
     ch_value v = ch_stk_pop(&local);
     ch_value cp = ch_valcpy(&v);
     ch_stk_push(&local, v);
@@ -212,7 +223,7 @@ ch_stack_node *_mangle_(dup, "dup")(ch_stack_node **full) {
 }
 
 ch_stack_node *_mangle_(swp, "swp")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 2);
+    ch_stack_node *local = ch_stk_args(full, 2, 0);
     ch_value a = ch_stk_pop(&local);
     ch_value b = ch_stk_pop(&local);
     ch_stk_push(&local, a);
@@ -233,7 +244,7 @@ ch_stack_node *_mangle_(dbg, "dbg")(ch_stack_node **full) {
 }
 
 ch_stack_node *_mangle_(equ_cmp, "=")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 2);
+    ch_stack_node *local = ch_stk_args(full, 2, 0);
     ch_value b = ch_stk_pop(&local);
     ch_value a = ch_stk_pop(&local);
     if (a.kind != b.kind) {
@@ -271,7 +282,7 @@ ch_stack_node *_mangle_(equ_cmp, "=")(ch_stack_node **full) {
 }
 
 ch_stack_node *_mangle_(sub, "-")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 2);
+    ch_stack_node *local = ch_stk_args(full, 2, 0);
     ch_value b = ch_stk_pop(&local);
     ch_value a = ch_stk_pop(&local);
     if (a.kind == CH_VALK_INT && b.kind == CH_VALK_INT) {
@@ -291,7 +302,7 @@ ch_stack_node *_mangle_(sub, "-")(ch_stack_node **full) {
 }
 
 ch_stack_node *_mangle_(add, "+")(ch_stack_node **full) {
-    ch_stack_node *local = ch_stk_args(full, 2);
+    ch_stack_node *local = ch_stk_args(full, 2, 0);
     ch_value b = ch_stk_pop(&local);
     ch_value a = ch_stk_pop(&local);
     if (a.kind == CH_VALK_INT && b.kind == CH_VALK_INT) {

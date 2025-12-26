@@ -1,8 +1,7 @@
-fn fibo  (x : int) -> (int) {
-→ ⇈ 0 = ? ⇈ 1 = ? ⇈ 1 - fibo ↕ 2 - fibo +
-        ↓       ↓
+fn print-all (...) -> () {
+→ dbg print
 }
 
 fn main () -> () {
-→ 10 fibo print
+→ 5 "Hello" 3 2 1 dbg print-all
 }
